@@ -1,0 +1,54 @@
+{
+  "name": "flow-state",
+  "displayName": "Flow State",
+  "description": "Stream coding activity to your self-hosted Flow State analytics server.",
+  "version": "0.1.0",
+  "private": true,
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "main": "./dist/extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "configuration": {
+      "title": "Flow State",
+      "properties": {
+        "flowState.serverUrl": {
+          "type": "string",
+          "default": "http://localhost:8787",
+          "description": "Base URL of the Flow State server."
+        },
+        "flowState.userId": {
+          "type": "string",
+          "default": "",
+          "description": "Your user id (e.g. 'abhi')."
+        },
+        "flowState.userName": {
+          "type": "string",
+          "default": "",
+          "description": "Display name shown to peers."
+        },
+        "flowState.heartbeatInterval": {
+          "type": "number",
+          "default": 60,
+          "description": "Seconds between heartbeat pings."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "tsc -p ./tsconfig.json",
+    "build": "tsc -p ./tsconfig.json",
+    "typecheck": "tsc -p ./tsconfig.json --noEmit",
+    "watch": "tsc -watch -p ./tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/vscode": "^1.85.0",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5.7.3",
+    "ws": "^8.18.0"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

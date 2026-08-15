@@ -1,0 +1,21 @@
+{
+  "name": "tracker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Privacy-first developer productivity analytics with a collaborative presence layer",
+  "workspaces": [
+    "packages/server",
+    "packages/web",
+    "packages/vscode"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @tracker/server",
+    "dev:web": "npm run dev --workspace @tracker/web",
+    "dev:vscode": "npm run dev --workspace @tracker/vscode",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

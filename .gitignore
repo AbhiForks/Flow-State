@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# build outputs
+.next/
+out/
+dist/
+*.tsbuildinfo
+
+# data / local state
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.local
+
+# os / editor
+.DS_Store
+Thumbs.db
+*.log
