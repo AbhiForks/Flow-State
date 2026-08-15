@@ -15,6 +15,15 @@ function dateList(days: number): string[] {
   return out;
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function shortDate(iso: string): string {
+  const [, m, d] = iso.split("-").map(Number);
+  const weekday = WEEKDAYS[new Date(`${iso}T00:00:00Z`).getUTCDay()]!;
+  return `${weekday} ${d}`;
+}
+
 function smooth(points: [number, number][]): string {
   if (points.length < 2) return points.length === 1 ? `M${points[0][0]},${points[0][1]}` : "";
   let d = `M${points[0][0].toFixed(1)},${points[0][1].toFixed(1)}`;
@@ -62,6 +71,11 @@ export function DailyChart({ byDay, days }: { byDay: DayBucket[]; days: number }
   const ticks = Array.from({ length: maxH + 1 }, (_, i) => i);
   const labelEvery = Math.ceil(series.length / 6);
 
+  const active = series.filter((s) => s > 0);
+  const avgSec = active.length ? Math.round(active.reduce((a, b) => a + b, 0) / active.length) : 0;
+  const avgY = y(avgSec);
+  const avgH = avgSec / 3600;
+
   function onMove(e: React.MouseEvent) {
     const rect = ref.current?.getBoundingClientRect();
     if (!rect) return;
@@ -104,10 +118,19 @@ export function DailyChart({ byDay, days }: { byDay: DayBucket[]; days: number }
         <path d={area} fill="url(#dg)" />
         <path className="draw-line" pathLength={1} d={line} fill="none" stroke="var(--accent)" strokeWidth={2.2} filter="url(#glow)" strokeLinecap="round" />
 
+        {avgSec > 0 && (
+          <g>
+            <line x1={padL} x2={W - padR} y1={avgY} y2={avgY} stroke="var(--faint)" strokeWidth={1} strokeDasharray="4 4" opacity={0.7} />
+            <text x={W - padR} y={avgY - 5} textAnchor="end" fontSize={9.5} fill="var(--faint)" fontFamily="var(--font-mono)">
+              avg {avgH >= 1 ? `${avgH.toFixed(1)}h` : `${Math.round(avgSec / 60)}m`}
+            </text>
+          </g>
+        )}
+
         {dates.map((date, i) =>
           i % labelEvery === 0 ? (
             <text key={date} x={x(i)} y={H - 8} textAnchor="middle" fontSize={9.5} fill="var(--faint)" fontFamily="var(--font-mono)">
-              {date.slice(5)}
+              {shortDate(date)}
             </text>
           ) : null,
         )}

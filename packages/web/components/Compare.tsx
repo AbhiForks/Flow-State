@@ -2,20 +2,14 @@
 
 import type { UserSummary } from "@/lib/api";
 import { fmtHM } from "@/lib/format";
-import { avatarColor } from "@/lib/colors";
-import { initials } from "@/lib/format";
+import { Avatar } from "@/components/Avatar";
 import { useCountUp } from "@/hooks/useCountUp";
 
 function Bar({ name, seconds, max, friend }: { name: string; seconds: number; max: number; friend?: boolean }) {
   const w = useCountUp(max > 0 ? Math.round((seconds / max) * 100) : 0, 1000);
   return (
     <div className="vs-row">
-      <div
-        className="avatar sm"
-        style={{ background: avatarColor(name), color: friend ? "#0a0a0c" : "#0a0a0c" }}
-      >
-        {initials(name)}
-      </div>
+      <Avatar name={name} size="sm" />
       <div style={{ flex: 1 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
           <span className="name">{name}</span>
@@ -31,7 +25,7 @@ function Bar({ name, seconds, max, friend }: { name: string; seconds: number; ma
   );
 }
 
-export function Compare({ you, friend }: { you: UserSummary; friend: UserSummary }) {
+export function Compare({ you, friend, range }: { you: UserSummary; friend: UserSummary; range: number }) {
   const max = Math.max(you.totalSeconds, friend.totalSeconds, 1);
   const delta = Math.abs(you.totalSeconds - friend.totalSeconds);
   const leader = you.totalSeconds >= friend.totalSeconds ? you : friend;
@@ -40,8 +34,12 @@ export function Compare({ you, friend }: { you: UserSummary; friend: UserSummary
   return (
     <section className="card compare">
       <div className="compare-vs">
-        <div className="section-title" style={{ marginBottom: 4 }}>
-          You vs {friend.name}
+        <div className="vs-title">
+          <Avatar name={you.name} size="sm" />
+          <span>{you.name}</span>
+          <span className="vs-title-sep">vs</span>
+          <span>{friend.name}</span>
+          <Avatar name={friend.name} size="sm" />
         </div>
         <div className="vs-delta">
           {delta === 0 ? (
@@ -53,7 +51,12 @@ export function Compare({ you, friend }: { you: UserSummary; friend: UserSummary
           )}
         </div>
         <div className="section-note" style={{ color: "var(--faint)", textTransform: "none", fontFamily: "var(--font-mono)", fontSize: 11 }}>
-          focus time, last {14} days · friendly rivalry only
+          focus time, last {range} days · friendly rivalry only
+        </div>
+        <div className="vs-burn">
+          at bench rates (₹800/hr) this sprint bills ₹
+          {Math.round(((you.totalSeconds + friend.totalSeconds) / 3600) * 800).toLocaleString("en-IN")} —
+          you're pricing yourselves wrong.
         </div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 16, justifyContent: "center" }}>

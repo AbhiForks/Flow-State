@@ -1,5 +1,5 @@
-import { avatarColor } from "@/lib/colors";
-import { initials } from "@/lib/format";
+import { Avatar } from "@/components/Avatar";
+import Link from "next/link";
 import type { PresenceState } from "@/lib/api";
 
 const ICONS: Record<string, React.ReactNode> = {
@@ -42,27 +42,60 @@ const NAV = [
   { id: "presence", label: "Presence" },
 ];
 
-export function Sidebar({ active, presence }: { active: string; presence: PresenceState[] }) {
+export function Sidebar({
+  active,
+  presence,
+  collapsed,
+  onToggle,
+}: {
+  active: string;
+  presence: PresenceState[];
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${collapsed ? "collapsed" : ""}`}>
+      <button type="button" className="rail-toggle" onClick={onToggle} title={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
+        {collapsed ? (
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 3l5 5-5 5" />
+          </svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10 3L5 8l5 5" />
+          </svg>
+        )}
+      </button>
+
       <div className="brand">
-        <div className="brand-mark">
+        <div
+          className="brand-mark"
+          onClick={collapsed ? onToggle : undefined}
+          title={collapsed ? "Expand sidebar" : undefined}
+        >
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#0d1202" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2 9h3l2.5-5 3 9 2-4h3.5" />
           </svg>
         </div>
-        <div>
+        <div className="brand-text">
           <div className="brand-name">Flow State</div>
           <div className="brand-sub">analytics</div>
         </div>
       </div>
 
       <nav className="nav">
+        <Link href="/home" className="nav-item" title="Home">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 7.5 8 3l6 4.5" />
+            <path d="M3.5 6.5V13h9V6.5" />
+          </svg>
+          <span className="nav-text">Home</span>
+        </Link>
         <div className="nav-label">Workspace</div>
         {NAV.map((n) => (
-          <div key={n.id} className={`nav-item ${active === n.id ? "active" : ""}`}>
+          <div key={n.id} className={`nav-item ${active === n.id ? "active" : ""}`} title={n.label}>
             {ICONS[n.id]}
-            {n.label}
+            <span className="nav-text">{n.label}</span>
           </div>
         ))}
       </nav>
@@ -70,14 +103,12 @@ export function Sidebar({ active, presence }: { active: string; presence: Presen
       <div className="sidebar-foot">
         <div className="server-status">
           <span className="pulse-dot" />
-          api connected
+          <span className="server-text">api connected</span>
         </div>
         <div className="nav-label">Live now</div>
         {presence.map((p) => (
-          <div className="user-chip" key={p.user}>
-            <div className="avatar sm" style={{ background: avatarColor(p.name) }}>
-              {initials(p.name)}
-            </div>
+          <div className="user-chip" key={p.user} title={p.name}>
+            <Avatar name={p.name} size="sm" />
             <div className="user-meta">
               <div className="n">{p.name}</div>
               <div className="s">{p.status === "coding" ? p.project ?? "coding" : p.status}</div>
