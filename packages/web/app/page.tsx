@@ -1,317 +1,234 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Sidebar } from "@/components/Sidebar";
-import { KpiCard } from "@/components/KpiCard";
-import { DailyChart } from "@/components/DailyChart";
-import { Heatmap } from "@/components/Heatmap";
-import { Breakdown } from "@/components/Breakdown";
-import { PresencePanel } from "@/components/PresencePanel";
-import { Compare } from "@/components/Compare";
-import { SfClock } from "@/components/SfClock";
-import { GoalBar } from "@/components/GoalBar";
-import { FareMeter } from "@/components/FareMeter";
-import { OtherLife } from "@/components/OtherLife";
-import { MotivationStrip } from "@/components/MotivationStrip";
-import { getSummary, getPresence, type SummaryResponse, type PresenceState } from "@/lib/api";
-import { fmtDuration, fmtHM } from "@/lib/format";
-import { useCountUp } from "@/hooks/useCountUp";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { SfClockHero } from "@/components/SfClockHero";
+import { getSummary, type SummaryResponse } from "@/lib/api";
 
-const RANGES = [
-  { d: 7, label: "7d" },
-  { d: 14, label: "14d" },
-  { d: 30, label: "30d" },
-  { d: 90, label: "90d" },
+const BENCH = [
+  "TCS calls a week of your flow a quarter's deliverable",
+  "Infosys pays ₹3.6L/yr for 12x the hours you just put in",
+  "Wipro's bench is 90 days. your bench is zero — you ship",
+  "Cognizant bills offshore for what you did in one session",
+  "HCL: 'effort appreciated'. SF: effort priced at $150/hr",
+  "the bench sells time. you sell outcomes. different market",
+  "₹40L vs ₹4L a year — same brain, different interview",
 ];
 
-function TodayStat({ seconds }: { seconds: number }) {
-  const count = useCountUp(seconds, 1200);
-  const { value, unit } = fmtDuration(count);
-  return (
-    <span className="hero-title">
-      {value}
-      <em> {unit}</em>
-    </span>
-  );
-}
+const ROUNDS = [
+  { n: "recruiter", l: "expected TC — say the number without flinching" },
+  { n: "phone screen", l: "live coding in a shared doc, no autocomplete" },
+  { n: "coding", l: "a whiteboard DP even the staff engineer can't solve" },
+  { n: "system design", l: "scale your weekend project to 1B users. casually" },
+  { n: "behavioral", l: "5 stories where you owned the outcome" },
+  { n: "team match", l: "pray they don't read your commit times" },
+];
 
-export default function Page() {
-  const [range, setRange] = useState(14);
-  const [user, setUser] = useState("all");
+const MILESTONES = [
+  { d: 3, l: "interview prep" },
+  { d: 7, l: "system design" },
+  { d: 14, l: "onsite week" },
+  { d: 21, l: "offer negotiation" },
+  { d: 30, l: "TC reset" },
+];
+
+export default function Home() {
   const [data, setData] = useState<SummaryResponse | null>(null);
-  const [presence, setPresence] = useState<PresenceState[]>([]);
-  const [err, setErr] = useState<string | null>(null);
-  const [tick, setTick] = useState(0);
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("fs.rail") === "1";
-  });
+  const [round, setRound] = useState(0);
+  const [burn, setBurn] = useState(0);
 
   useEffect(() => {
-    localStorage.setItem("fs.rail", collapsed ? "1" : "0");
-  }, [collapsed]);
-
-  useEffect(() => {
-    getPresence().then(setPresence).catch(() => {});
+    getSummary(7, "all").then(setData).catch(() => {});
   }, []);
 
   useEffect(() => {
-    let alive = true;
-    setErr(null);
-    setData(null);
-    getSummary(range, user)
-      .then((d) => alive && setData(d))
-      .catch((e) => alive && setErr(String(e)));
-    return () => {
-      alive = false;
-    };
-  }, [range, user, tick]);
+    const id = setInterval(() => setRound((v) => (v + 1) % ROUNDS.length), 2600);
+    return () => clearInterval(id);
+  }, []);
 
-  const summary = data
-    ? user === "all"
-      ? data.combined
-      : data.users.find((u) => u.user === user) ?? data.combined
-    : null;
+  useEffect(() => {
+    const id = setInterval(() => setBurn((v) => (v + 1) % BENCH.length), 5200);
+    return () => clearInterval(id);
+  }, []);
+
   const users = data?.users ?? [];
-  const friend = data?.users[0] ? users[users.length - 1] : null;
-
-  const spark = useMemo(() => summary?.byDay.map((d) => d.seconds) ?? [], [summary]);
-
   const todayKey = new Date().toISOString().slice(0, 10);
-  const todaySec = summary?.byDay.find((d) => d.date === todayKey)?.seconds ?? 0;
-
-  const dayMap = useMemo(() => new Map((summary?.byDay ?? []).map((d) => [d.date, d.seconds])), [summary]);
-  const last7 = useMemo(() => {
-    const out: { date: string; on: boolean }[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const iso = d.toISOString().slice(0, 10);
-      out.push({ date: iso, on: (dayMap.get(iso) ?? 0) >= 600 });
-    }
-    return out;
-  }, [dayMap]);
-
-  const yesterdaySec = useMemo(() => {
-    const y = new Date();
-    y.setDate(y.getDate() - 1);
-    return dayMap.get(y.toISOString().slice(0, 10)) ?? 0;
-  }, [dayMap]);
-
-  const delta = todaySec - yesterdaySec;
-  const deltaPct = yesterdaySec > 0 ? Math.round((delta / yesterdaySec) * 100) : null;
-
-  const flowUsd = summary ? Math.round(((todaySec / 3600) * 150) / 5) * 5 : 0;
-  const flowInr = (flowUsd * 85).toLocaleString("en-IN");
-
-  const fmtRange = () => {
-    if (!data) return "";
-    const f = new Date(data.range.from * 1000);
-    const t = new Date(data.range.to * 1000);
-    const o = (d: Date) => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-    return `${o(f)} – ${o(t)}`;
-  };
-
-  const today = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+  const todaySec = users[0]?.byDay.find((d) => d.date === todayKey)?.seconds ?? 3.6 * 3600;
+  const usd = Math.round((todaySec / 3600) * 150);
+  const inr = (usd * 85).toLocaleString("en-IN");
+  const total = data ? Math.round(data.combined.totalSeconds / 3600) : 42;
+  const streak = data?.combined.flowStreak ?? 12;
+  const annual = usd * 1800 / 150;
+  const pct = Math.min((annual / 300000) * 100, 100);
 
   return (
-    <div className={`shell ${collapsed ? "rail" : ""}`}>
-      <Sidebar active="overview" presence={presence} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
-      <main className="main">
-        <div className="hero">
-          <div>
-            <div className="hero-kicker">{today}</div>
-            {summary ? (
-              <>
-                <TodayStat seconds={todaySec} />
-                <div className="hero-meta">
-                  <span>{todaySec > 0 ? "in flow today" : "no flow recorded yet today"}</span>
-                  <span className="sep">/</span>
-                  <span>streak <b style={{ color: "var(--accent)" }}>{summary.flowStreak}d</b></span>
-                  <span className="sep">/</span>
-                  <span>{fmtHM(summary.totalSeconds)} in {range}d</span>
-                </div>
-                <GoalBar todaySec={todaySec} />
-              </>
-            ) : (
-              <>
-                <h1 className="hero-title" style={{ color: "var(--dim)" }}>…</h1>
-                <div className="hero-meta">loading workspace</div>
-              </>
-            )}
+    <div className="hp">
+      <header className="hp-top">
+        <Link href="/" className="hp-brand">
+          <span className="hp-mark">F</span>
+          <span>Flow State</span>
+        </Link>
+        <Link href="/dashboard" className="hp-open">
+          Open dashboard →
+        </Link>
+      </header>
+
+      <section className="hp-hero">
+        <div className="hp-hero-left">
+          <div className="hp-kicker">two friends · one leaderboard · zero excuses</div>
+          <h1 className="hp-title">
+            Refuse the bench.
+            <br />
+            <em>Bill like you live in SF.</em>
+          </h1>
+          <p className="hp-sub">
+            a self-hosted developer analytics tracker with a live presence layer. your hours are
+            priced at SF rates, your streak is public, and the service companies stay mad.
+          </p>
+          <div className="hp-cta">
+            <Link href="/dashboard" className="hp-btn">
+              Open the dashboard →
+            </Link>
+            <a href="#the-money" className="hp-link">
+              see the math ↓
+            </a>
           </div>
-          <div className="hero-side">
-            <SfClock />
-            <div className="controls">
-              {summary && (
-                <span
-                  className="chip"
-                  title="Rough value of today's flow at SF L5 comp rates, converted to INR"
-                >
-                  ≈ ${flowUsd} · ₹{flowInr}
-                  <span className="chip-label">flow value</span>
-                </span>
-              )}
-              <select className="select" value={user} onChange={(e) => setUser(e.target.value)}>
-                <option value="all">Everyone</option>
-                {users.map((u) => (
-                  <option key={u.user} value={u.user}>
-                    {u.name}
-                  </option>
-                ))}
-              </select>
-              <div className="seg">
-                {RANGES.map((r) => (
-                  <button key={r.d} className={range === r.d ? "on" : ""} onClick={() => setRange(r.d)}>
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <div className="hp-ledger">
+            <span>focus {total}h · 7d</span>
+            <span className="hp-ledger-sep">/</span>
+            <span>streak {streak}d</span>
+            <span className="hp-ledger-sep">/</span>
+            <span>≈ ${usd} · ₹{inr} today</span>
           </div>
         </div>
+        <div className="hp-hero-clock">
+          <SfClockHero />
+        </div>
+      </section>
 
-        {err && (
-          <div className="loading">
-            <div>Can't reach the server at {process.env.NEXT_PUBLIC_API}</div>
-            <button className="retry-btn" onClick={() => setTick((t) => t + 1)}>
-              retry
-            </button>
+      <div className="hp-marquee" aria-hidden>
+        <div className="hp-marquee-track">
+          {[...BENCH, ...BENCH].map((m, i) => (
+            <span className="hp-marquee-item" key={i}>
+              {m}
+              <span className="hp-marquee-dot">·</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <section className="hp-sec" id="the-money">
+        <div className="hp-sec-label">
+          <span>01</span> the money
+        </div>
+        <div className="hp-ladder">
+          <div className="hp-ladder-bar">
+            <div className="hp-ladder-fill" style={{ width: `${pct}%` }} />
+            <div className="hp-ladder-marker" style={{ left: `calc(${pct}% - 3px)` }} />
+            {[
+              { v: "₹4L", l: "mass recruiter" },
+              { v: "₹36L", l: "product co" },
+              { v: "$150k", l: "google L4" },
+              { v: "$250k", l: "meta E5" },
+              { v: "$300k+", l: "L5 · SF" },
+            ].map((r, i) => (
+              <div
+                key={r.v}
+                className="hp-ladder-rung"
+                style={{ left: `${(i / 4) * 100}%` }}
+              >
+                <div className="hp-ladder-tick" />
+                <div className="hp-ladder-v">{r.v}</div>
+                <div className="hp-ladder-l">{r.l}</div>
+              </div>
+            ))}
           </div>
-        )}
+          <div className="hp-ladder-foot">
+            your flow pace ≈ ${annual.toLocaleString()}/yr —{" "}
+            {pct >= 95
+              ? "the ladder has nowhere left to go."
+              : pct >= 60
+                ? "above the bench. keep climbing."
+                : "the bench is below you now. don't look down."}
+          </div>
+        </div>
+      </section>
 
-        {summary && (
-          <MotivationStrip
-            todaySec={todaySec}
-            streak={summary.flowStreak}
-            youName={users[0]?.name ?? "you"}
-            friendName={user === "all" ? friend?.name ?? null : null}
-            friendDeltaSec={user === "all" && friend ? users[0]!.totalSeconds - friend.totalSeconds : 0}
-            activeDays={summary.activeDays}
-            range={range}
-          />
-        )}
-
-        {!data && !err && (
-          <>
-            <div className="kpi-row">
-              {[0, 1, 2, 3].map((i) => (
-                <div className="card kpi" key={i}>
-                  <div className="sk sk-line" />
-                  <div className="sk sk-num" />
-                  <div className="sk sk-line" />
-                </div>
-              ))}
+      <section className="hp-sec">
+        <div className="hp-sec-label">
+          <span>02</span> the gauntlet
+        </div>
+        <div className="hp-comps">google · meta · openai · anthropic</div>
+        <div className="hp-gauntlet">
+          {ROUNDS.map((r, i) => (
+            <div key={r.n} className={`hp-gr ${i === round ? "cur" : ""}`}>
+              <span className="hp-gr-i">{String(i + 1).padStart(2, "0")}</span>
+              <span className="hp-gr-n">{r.n}</span>
+              <span className="hp-gr-l">{r.l}</span>
             </div>
-            <div className="sk sk-chart" />
-          </>
-        )}
+          ))}
+        </div>
+      </section>
 
-        {summary && (
-          <>
-            <div className="kpi-row">
-              <KpiCard
-                label="Focus time"
-                accent
-                animate
-                value={`${Math.round(summary.totalSeconds / 3600)}`}
-                unit="h total"
-                foot={
-                  deltaPct === null || delta === 0 ? (
-                    <span className="tick-flat">no change vs yesterday</span>
-                  ) : delta > 0 ? (
-                    <span className="tick-up">▲ {deltaPct}% vs yesterday</span>
-                  ) : (
-                    <span style={{ color: "var(--coral)" }}>▼ {Math.abs(deltaPct)}% vs yesterday</span>
-                  )
-                }
-                spark={spark}
-              />
-              <KpiCard
-                label="Active days"
-                animate
-                value={`${summary.activeDays}`}
-                unit={`of ${range}`}
-                foot={<span className="tick-flat">{Math.round((summary.activeDays / range) * 100)}% of days</span>}
-              />
-              <KpiCard
-                label="Flow streak"
-                animate
-                value={`${summary.flowStreak}`}
-                unit="days"
-                foot={
-                  <div className="days">
-                    {last7.map((d, i) => (
-                      <span key={d.date} className={`day-dot ${d.on ? "on" : ""} ${i === 6 ? "today" : ""}`} />
-                    ))}
-                    <span className="tick-flat" style={{ marginLeft: 4 }}>last 7 days</span>
-                  </div>
-                }
-              />
-              <KpiCard
-                label="Sessions"
-                animate
-                value={`${summary.sessions}`}
-                unit="total"
-                foot={<span className="tick-flat">{summary.writes.toLocaleString()} code events</span>}
-              />
-            </div>
-
-            <FareMeter todaySec={todaySec} />
-
-            <div className="mid-row">
-              {friend && user === "all" && <Compare you={users[0]!} friend={friend} range={range} />}
-              <OtherLife todaySec={todaySec} />
-            </div>
-
-            <div className="grid-2">
-              <div className="grid-stack">
-                <section className="card flush">
-                  <div className="section-head">
-                    <div className="section-title">Daily focus</div>
-                    <div className="section-note">{fmtRange()} · hours of deep work</div>
-                  </div>
-                  <DailyChart byDay={summary.byDay} days={range} key={range} />
-                </section>
-
-                <section className="card flush">
-                  <div className="section-head">
-                    <div className="section-title">Consistency</div>
-                    <div className="section-note">last 16 weeks</div>
-                  </div>
-                  <Heatmap byDay={summary.byDay} weeks={16} />
-                </section>
+      <section className="hp-sec">
+        <div className="hp-sec-label">
+          <span>03</span> the streak
+        </div>
+        <div className="hp-bounty">
+          {MILESTONES.map((m) => {
+            const on = m.d <= streak;
+            const next = !on && MILESTONES.find((x) => x.d > streak) === m;
+            return (
+              <div key={m.d} className={`hp-bn ${on ? "on" : ""} ${next ? "next" : ""}`}>
+                <div className="hp-bn-d">{m.d}d</div>
+                <div className="hp-bn-l">{m.l}</div>
+                <div className="hp-bn-s">{on ? "claimed" : next ? "next up" : "locked"}</div>
               </div>
+            );
+          })}
+        </div>
+      </section>
 
-              <div className="grid-stack">
-                <section className="card flush">
-                  <div className="section-head">
-                    <div className="section-title">Presence</div>
-                    <div className="section-note">live</div>
-                  </div>
-                  <PresencePanel initial={presence} />
-                </section>
+      <section className="hp-sec">
+        <div className="hp-sec-label">
+          <span>04</span> the score
+        </div>
+        <div className="hp-score">
+          <div className="hp-score-side">
+            <div className="hp-score-name">the bench</div>
+            <div className="hp-score-v dim">∞</div>
+            <div className="hp-score-sub">appreciation units · ₹800/hr</div>
+          </div>
+          <div className="hp-score-vs">vs</div>
+          <div className="hp-score-side">
+            <div className="hp-score-name">you</div>
+            <div className="hp-score-v">${usd}</div>
+            <div className="hp-score-sub">₹{inr} today · real money</div>
+          </div>
+        </div>
+        <div className="hp-score-foot">the scoreboard says: the bench is losing on purpose</div>
+      </section>
 
-                <section className="card flush">
-                  <div className="section-head">
-                    <div className="section-title">Languages</div>
-                    <div className="section-note">{summary.byLanguage.length} tracked</div>
-                  </div>
-                  <Breakdown items={summary.byLanguage} mode="lang" />
-                </section>
+      <section className="hp-end">
+        <h2 className="hp-end-title">
+          You vs the bench.
+          <br />
+          <em>Pick a side.</em>
+        </h2>
+        <Link href="/dashboard" className="hp-btn hp-end-btn">
+          Open the dashboard →
+        </Link>
+      </section>
 
-                <section className="card flush">
-                  <div className="section-head">
-                    <div className="section-title">Projects</div>
-                    <div className="section-note">{summary.byProject.length} tracked</div>
-                  </div>
-                  <Breakdown items={summary.byProject} mode="single" />
-                </section>
-              </div>
-            </div>
-          </>
-        )}
-      </main>
+      <footer className="hp-foot">
+        <div className="hp-foot-brand">
+          <span className="hp-mark">F</span> Flow State
+        </div>
+        <div className="hp-foot-line">self-hosted · presence layer · zero excuses</div>
+        <Link href="/dashboard" className="hp-link">
+          go to the dashboard →
+        </Link>
+      </footer>
     </div>
   );
 }

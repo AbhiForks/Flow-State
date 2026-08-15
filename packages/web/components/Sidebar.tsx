@@ -84,7 +84,7 @@ export function Sidebar({
       </div>
 
       <nav className="nav">
-        <Link href="/home" className="nav-item" title="Home">
+        <Link href="/" className="nav-item" title="Home">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2 7.5 8 3l6 4.5" />
             <path d="M3.5 6.5V13h9V6.5" />
