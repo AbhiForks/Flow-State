@@ -27,10 +27,18 @@ export function colorFor(key: string, index = 0): string {
   return FALLBACK[h % FALLBACK.length]!;
 }
 
-export const AVATAR_COLORS = ["#c8f169", "#6ea8fe", "#ff8a5c", "#7ee0a0", "#b58db6"];
-
-export function avatarColor(name: string): string {
+// each person gets a stable hue derived from their name
+export function userHue(name: string): number {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length]!;
+  return h % 360;
+}
+
+export function userGradient(name: string): string {
+  const hue = userHue(name);
+  return `linear-gradient(140deg, hsl(${hue} 72% 60%), hsl(${hue} 66% 40%))`;
+}
+
+export function userSolid(name: string): string {
+  return `hsl(${userHue(name)} 70% 52%)`;
 }

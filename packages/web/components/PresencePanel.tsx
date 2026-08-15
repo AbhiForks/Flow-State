@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { PresenceState } from "@/lib/api";
 import { API } from "@/lib/api";
-import { avatarColor } from "@/lib/colors";
-import { initials } from "@/lib/format";
+import { Avatar } from "@/components/Avatar";
 import { fmtSince } from "@/lib/format";
 
 const STATUS_LABEL: Record<PresenceState["status"], string> = {
@@ -48,9 +47,7 @@ export function PresencePanel({ initial }: { initial: PresenceState[] }) {
       {peers.map((p) => (
         <div className="peer" key={p.user}>
           <div className="pstatus">
-            <div className="avatar" style={{ background: avatarColor(p.name) }}>
-              {initials(p.name)}
-            </div>
+            <Avatar name={p.name} />
             <span className={`live-dot ${p.status}`} />
           </div>
           <div className="meta">

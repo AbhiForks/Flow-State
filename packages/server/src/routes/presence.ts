@@ -4,9 +4,9 @@ import type { PresenceState, PresenceStatus } from "../types.js";
 const presence = new Map<string, PresenceState>();
 
 // seed a believable "live" state for the demo
-presence.set("abhi", {
-  user: "abhi",
-  name: "Abhi",
+presence.set("abhilash", {
+  user: "abhilash",
+  name: "Abhilash",
   status: "coding",
   project: "flow-state",
   editor: "vscode",
@@ -14,9 +14,9 @@ presence.set("abhi", {
   since: Math.floor(Date.now() / 1000) - 42 * 60,
   lastActive: Math.floor(Date.now() / 1000) - 8,
 });
-presence.set("maya", {
-  user: "maya",
-  name: "Maya",
+presence.set("roshan", {
+  user: "roshan",
+  name: "Roshan",
   status: "coding",
   project: "pulse-core",
   editor: "jetbrains",

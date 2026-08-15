@@ -6,8 +6,8 @@ interface Profile {
 }
 
 const PROFILES: Profile[] = [
-  { user: "abhi", name: "Abhi" },
-  { user: "maya", name: "Maya" },
+  { user: "abhilash", name: "Abhilash" },
+  { user: "roshan", name: "Roshan" },
 ];
 
 const LANGS = [
