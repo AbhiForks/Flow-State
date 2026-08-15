@@ -48,10 +48,10 @@ export function PresencePanel({ initial }: { initial: PresenceState[] }) {
       {peers.map((p) => (
         <div className="peer" key={p.user}>
           <div className="pstatus">
-            <div className={`ring ${p.status}`} />
             <div className="avatar" style={{ background: avatarColor(p.name) }}>
               {initials(p.name)}
             </div>
+            <span className={`live-dot ${p.status}`} />
           </div>
           <div className="meta">
             <div className="n">{p.name}</div>

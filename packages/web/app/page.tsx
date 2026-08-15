@@ -7,8 +7,10 @@ import { DailyChart } from "@/components/DailyChart";
 import { Heatmap } from "@/components/Heatmap";
 import { Breakdown } from "@/components/Breakdown";
 import { PresencePanel } from "@/components/PresencePanel";
+import { Compare } from "@/components/Compare";
 import { getSummary, getPresence, type SummaryResponse, type PresenceState } from "@/lib/api";
-import { fmtDuration, fmtClock } from "@/lib/format";
+import { fmtDuration, fmtHM } from "@/lib/format";
+import { useCountUp } from "@/hooks/useCountUp";
 
 const RANGES = [
   { d: 7, label: "7d" },
@@ -16,6 +18,17 @@ const RANGES = [
   { d: 30, label: "30d" },
   { d: 90, label: "90d" },
 ];
+
+function TodayStat({ seconds }: { seconds: number }) {
+  const count = useCountUp(seconds, 1200);
+  const { value, unit } = fmtDuration(count);
+  return (
+    <span className="hero-title">
+      {value}
+      <em> {unit}</em>
+    </span>
+  );
+}
 
 export default function Page() {
   const [range, setRange] = useState(14);
@@ -39,27 +52,53 @@ export default function Page() {
     };
   }, [range, user]);
 
-  const summary = data ? (user === "all" ? data.combined : data.users.find((u) => u.user === user) ?? data.combined) : null;
+  const summary = data
+    ? user === "all"
+      ? data.combined
+      : data.users.find((u) => u.user === user) ?? data.combined
+    : null;
   const users = data?.users ?? [];
+  const friend = data?.users[0] ? users[users.length - 1] : null;
 
-  const spark = useMemo(() => (summary?.byDay.map((d) => d.seconds) ?? []), [summary]);
+  const spark = useMemo(() => summary?.byDay.map((d) => d.seconds) ?? [], [summary]);
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const todaySec = summary?.byDay.find((d) => d.date === todayKey)?.seconds ?? 0;
 
   const fmtRange = () => {
     if (!data) return "";
     const f = new Date(data.range.from * 1000);
     const t = new Date(data.range.to * 1000);
     const o = (d: Date) => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-    return `Last ${range}d · ${o(f)} – ${o(t)}`;
+    return `${o(f)} – ${o(t)}`;
   };
+
+  const today = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 
   return (
     <div className="shell">
       <Sidebar active="overview" presence={presence} />
       <main className="main">
-        <div className="topbar">
+        <div className="hero">
           <div>
-            <h1 className="page-title">Overview</h1>
-            <div className="page-sub">{fmtRange() || "Loading…"}</div>
+            <div className="hero-kicker">{today}</div>
+            {summary ? (
+              <>
+                <TodayStat seconds={todaySec} />
+                <div className="hero-meta">
+                  <span>{todaySec > 0 ? "in flow today" : "no flow recorded yet today"}</span>
+                  <span className="sep">/</span>
+                  <span>streak <b style={{ color: "var(--accent)" }}>{summary.flowStreak}d</b></span>
+                  <span className="sep">/</span>
+                  <span>{fmtHM(summary.totalSeconds)} in {range}d</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <h1 className="hero-title" style={{ color: "var(--dim)" }}>…</h1>
+                <div className="hero-meta">loading workspace</div>
+              </>
+            )}
           </div>
           <div className="controls">
             <select className="select" value={user} onChange={(e) => setUser(e.target.value)}>
@@ -80,8 +119,7 @@ export default function Page() {
           </div>
         </div>
 
-        {err && <div className="loading">Couldn’t reach the server at {process.env.NEXT_PUBLIC_API}. Start it with <code>npm run dev</code>.</div>}
-        {!data && !err && <div className="loading">Loading workspace…</div>}
+        {err && <div className="loading">Can't reach the server at {process.env.NEXT_PUBLIC_API}</div>}
 
         {summary && (
           <>
@@ -89,37 +127,43 @@ export default function Page() {
               <KpiCard
                 label="Focus time"
                 accent
-                value={fmtDuration(summary.totalSeconds).value}
-                unit={fmtDuration(summary.totalSeconds).unit}
-                foot={<span className="tick-up">▲ live</span>}
+                animate
+                value={`${Math.round(summary.totalSeconds / 3600)}`}
+                unit="h total"
+                foot={<span className="tick-up">▲ {Math.round(summary.avgSessionSeconds / 60)} min avg session</span>}
                 spark={spark}
               />
               <KpiCard
                 label="Active days"
+                animate
                 value={`${summary.activeDays}`}
-                unit={`/ ${range}`}
-                foot={<span>across the range</span>}
+                unit={`of ${range}`}
+                foot={<span className="tick-flat">{Math.round((summary.activeDays / range) * 100)}% of days</span>}
               />
               <KpiCard
                 label="Flow streak"
+                animate
                 value={`${summary.flowStreak}`}
                 unit="days"
-                foot={<span className="tick-up">keep it going</span>}
+                foot={<span className="tick-up">▲ still running</span>}
               />
               <KpiCard
-                label="Avg session"
-                value={fmtClock(summary.avgSessionSeconds).split(" ")[0]}
-                unit={fmtClock(summary.avgSessionSeconds).split(" ")[1]}
-                foot={<span>{summary.sessions} sessions logged</span>}
+                label="Sessions"
+                animate
+                value={`${summary.sessions}`}
+                unit="total"
+                foot={<span className="tick-flat">{summary.writes.toLocaleString()} code events</span>}
               />
             </div>
+
+            {friend && user === "all" && <Compare you={users[0]!} friend={friend} />}
 
             <div className="grid-2">
               <div className="grid-stack">
                 <section className="card flush">
                   <div className="section-head">
                     <div className="section-title">Daily focus</div>
-                    <div className="section-note">hours of deep work per day</div>
+                    <div className="section-note">{fmtRange()} · hours of deep work</div>
                   </div>
                   <DailyChart byDay={summary.byDay} days={range} />
                 </section>
@@ -137,7 +181,7 @@ export default function Page() {
                 <section className="card flush">
                   <div className="section-head">
                     <div className="section-title">Presence</div>
-                    <div className="section-note">real-time</div>
+                    <div className="section-note">live</div>
                   </div>
                   <PresencePanel initial={presence} />
                 </section>
